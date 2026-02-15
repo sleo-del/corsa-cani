@@ -4,98 +4,114 @@ const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
 const speedEl = document.getElementById("speed");
 const timeEl = document.getElementById("time");
+const pizzasEl = document.getElementById("pizzas");
+const pizzasLillaEl = document.getElementById("pizzas-lilla");
+const pizzasRamonEl = document.getElementById("pizzas-ramon");
 
-const arena = {
-  x: 60,
-  y: 60,
-  width: canvas.width - 120,
-  height: canvas.height - 120,
+const road = {
+  centerX: canvas.width / 2,
+  width: 220,
+  startY: 2200,
+  endY: -200,
 };
 
-const finishZone = {
-  x: arena.x + arena.width - 160,
-  y: arena.y + 80,
-  r: 48,
-};
+const finishZone = { x: road.centerX, y: -80, r: 60 };
 
 const dogs = [
   {
     name: "Leo",
     color: "#e7d3b3",
     img: "assets/leo.png",
-    x: arena.x + 100,
-    y: arena.y + arena.height - 140,
-    angle: -Math.PI / 2,
+    x: road.centerX,
+    y: 2000,
     speed: 0,
-    maxSpeed: 4.5,
-    accel: 0.12,
-    turn: 0.045,
-    finished: false,
-    time: 0,
+    maxSpeed: 4.8,
+    accel: 0.14,
+    pizzas: 0,
     ai: false,
+    finished: false,
   },
   {
     name: "Lilla",
     color: "#c8c6c3",
     img: "assets/lilla.png",
-    x: arena.x + 220,
-    y: arena.y + arena.height - 140,
-    angle: -Math.PI / 2,
+    x: road.centerX - 60,
+    y: 2040,
     speed: 0,
-    maxSpeed: 4.2,
-    accel: 0.1,
-    turn: 0.04,
-    finished: false,
-    time: 0,
+    maxSpeed: 2.4,
+    accel: 0.07,
+    pizzas: 0,
     ai: true,
+    finished: false,
   },
   {
     name: "Ramon Chocho",
     color: "#f2c07f",
     img: "assets/ramon.png",
-    x: arena.x + 340,
-    y: arena.y + arena.height - 140,
-    angle: -Math.PI / 2,
+    x: road.centerX + 60,
+    y: 2060,
     speed: 0,
-    maxSpeed: 4.0,
-    accel: 0.1,
-    turn: 0.04,
-    finished: false,
-    time: 0,
+    maxSpeed: 2.3,
+    accel: 0.07,
+    pizzas: 0,
     ai: true,
+    finished: false,
   },
 ];
 
 const images = new Map();
-
-dogs.forEach((dog) => {
-  const img = new Image();
-  img.src = dog.img;
-  images.set(dog.name, img);
-});
-
 const keys = new Set();
 let lastTime = 0;
 let started = false;
 let gameOver = false;
 let elapsed = 0;
+let cameraY = 0;
+let finishOrder = [];
 
-const finishText = (order) => `Arrivo! Podio: ${order.join(", ")}. Premi R per riprovare.`;
+const pizzaCount = 22;
+let pizzas = [];
+let palms = [];
+
+function generatePizzas() {
+  pizzas = [];
+  for (let i = 0; i < pizzaCount; i += 1) {
+    const t = (i + 1) / (pizzaCount + 1);
+    const y = road.startY + (road.endY - road.startY) * t;
+    const laneOffset = (i % 3 - 1) * 70;
+    pizzas.push({
+      x: road.centerX + laneOffset,
+      y,
+      collected: false,
+    });
+  }
+}
+
+function generatePalms() {
+  palms = [];
+  for (let y = road.startY + 100; y > road.endY - 200; y -= 180) {
+    palms.push({ x: road.centerX - road.width / 2 - 70, y });
+    palms.push({ x: road.centerX + road.width / 2 + 70, y: y - 80 });
+  }
+}
 
 function resetGame() {
-  const baseY = arena.y + arena.height - 140;
-  [0, 1, 2].forEach((i) => {
-    const dog = dogs[i];
-    dog.x = arena.x + 100 + i * 120;
-    dog.y = baseY;
-    dog.angle = -Math.PI / 2;
+  dogs[0].x = road.centerX;
+  dogs[0].y = 2000;
+  dogs[1].x = road.centerX - 60;
+  dogs[1].y = 2040;
+  dogs[2].x = road.centerX + 60;
+  dogs[2].y = 2060;
+  dogs.forEach((dog) => {
     dog.speed = 0;
+    dog.pizzas = 0;
     dog.finished = false;
-    dog.time = 0;
   });
+  finishOrder = [];
+  elapsed = 0;
   started = false;
   gameOver = false;
-  elapsed = 0;
+  generatePizzas();
+  generatePalms();
   statusEl.textContent = "Pronto. Premi FRECCIA SU per partire.";
 }
 
@@ -103,9 +119,8 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function keepInBounds(dog) {
-  dog.x = clamp(dog.x, arena.x + 25, arena.x + arena.width - 25);
-  dog.y = clamp(dog.y, arena.y + 25, arena.y + arena.height - 25);
+function isOnRoad(x) {
+  return Math.abs(x - road.centerX) <= road.width / 2;
 }
 
 function controlPlayer(dog) {
@@ -115,126 +130,242 @@ function controlPlayer(dog) {
     dog.speed = Math.min(dog.maxSpeed, dog.speed + dog.accel);
     started = true;
   } else if (keys.has("ArrowDown")) {
-    dog.speed = Math.max(-dog.maxSpeed / 2, dog.speed - dog.accel * 1.2);
+    dog.speed = Math.max(0, dog.speed - dog.accel * 1.4);
     started = true;
   } else {
-    dog.speed *= 0.97;
+    dog.speed *= 0.985;
   }
 
+  const sideStep = 7.5;
   if (keys.has("ArrowLeft")) {
-    dog.angle -= dog.turn * (dog.speed >= 0 ? 1 : -1);
+    dog.x -= sideStep;
   }
-
   if (keys.has("ArrowRight")) {
-    dog.angle += dog.turn * (dog.speed >= 0 ? 1 : -1);
+    dog.x += sideStep;
   }
 
-  dog.speed *= 0.995;
+  dog.x = clamp(dog.x, road.centerX - road.width / 2 + 18, road.centerX + road.width / 2 - 18);
 }
 
 function controlAI(dog) {
   if (dog.finished) return;
 
-  const dx = finishZone.x - dog.x;
-  const dy = finishZone.y - dog.y;
-  const targetAngle = Math.atan2(dy, dx);
-  const diff = Math.atan2(Math.sin(targetAngle - dog.angle), Math.cos(targetAngle - dog.angle));
-  dog.angle += clamp(diff, -dog.turn, dog.turn);
+  const targetPizza = pizzas.find((pizza) => !pizza.collected);
+  const targetX = targetPizza ? targetPizza.x : road.centerX;
 
-  const distance = Math.hypot(dx, dy);
-  const targetSpeed = distance < 90 ? 1.2 : dog.maxSpeed * 0.9;
-
-  if (dog.speed < targetSpeed) {
+  if (dog.speed < dog.maxSpeed * 0.92) {
     dog.speed += dog.accel * 0.9;
   } else {
-    dog.speed *= 0.98;
+    dog.speed *= 0.995;
   }
+
+  const diff = clamp(targetX - dog.x, -4, 4);
+  dog.x += diff;
+  dog.x = clamp(dog.x, road.centerX - road.width / 2 + 18, road.centerX + road.width / 2 - 18);
 }
 
 function updateDog(dog) {
-  dog.x += Math.cos(dog.angle) * dog.speed;
-  dog.y += Math.sin(dog.angle) * dog.speed;
-  keepInBounds(dog);
+  dog.y -= dog.speed;
+  if (!isOnRoad(dog.x)) {
+    dog.speed *= 0.92;
+  }
+}
+
+function checkPizzas(dog) {
+  pizzas.forEach((pizza) => {
+    if (pizza.collected) return;
+    const distance = Math.hypot(dog.x - pizza.x, dog.y - pizza.y);
+    if (distance < 28) {
+      pizza.collected = true;
+      dog.pizzas += 1;
+    }
+  });
 }
 
 function checkFinish(dog) {
   if (dog.finished) return;
   const distance = Math.hypot(dog.x - finishZone.x, dog.y - finishZone.y);
-  if (distance <= finishZone.r && Math.abs(dog.speed) < 0.9) {
+  if (distance <= finishZone.r && dog.speed < 0.8) {
     dog.finished = true;
     dog.speed = 0;
-    dog.time = elapsed;
+    finishOrder.push(dog);
   }
 }
 
-function drawTrack() {
-  ctx.fillStyle = "#d6c7b2";
-  ctx.fillRect(arena.x, arena.y, arena.width, arena.height);
+function drawMiamiBackground() {
+  ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+  for (let i = 0; i < 8; i += 1) {
+    ctx.beginPath();
+    ctx.arc(140 + i * 140, 90 + (i % 2) * 18, 32, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-  ctx.strokeStyle = "#8a6f4a";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+  for (let i = 0; i < 6; i += 1) {
+    ctx.beginPath();
+    ctx.arc(220 + i * 150, 40 + (i % 2) * 20, 22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPalm(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = "#3b8452";
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(0, 40);
+  ctx.lineTo(-6, -40);
+  ctx.stroke();
+
+  ctx.fillStyle = "#4ac77a";
+  ctx.beginPath();
+  ctx.ellipse(-18, -48, 30, 14, -0.6, 0, Math.PI * 2);
+  ctx.ellipse(12, -58, 30, 14, 0.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawRoad() {
+  ctx.lineWidth = road.width + 60;
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(road.centerX, road.startY - cameraY);
+  ctx.lineTo(road.centerX, road.endY - cameraY);
+  ctx.stroke();
+
+  ctx.lineWidth = road.width;
+  ctx.strokeStyle = "#2d2a38";
+  ctx.beginPath();
+  ctx.moveTo(road.centerX, road.startY - cameraY);
+  ctx.lineTo(road.centerX, road.endY - cameraY);
+  ctx.stroke();
+
+  ctx.lineWidth = road.width - 20;
+  ctx.strokeStyle = "#3b3848";
+  ctx.beginPath();
+  ctx.moveTo(road.centerX, road.startY - cameraY);
+  ctx.lineTo(road.centerX, road.endY - cameraY);
+  ctx.stroke();
+
+  ctx.setLineDash([24, 18]);
   ctx.lineWidth = 6;
-  ctx.strokeRect(arena.x, arena.y, arena.width, arena.height);
-
-  ctx.setLineDash([14, 10]);
-  ctx.strokeStyle = "rgba(79, 60, 34, 0.4)";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(arena.x + 22, arena.y + 22, arena.width - 44, arena.height - 44);
+  ctx.strokeStyle = "#f5d86a";
+  ctx.beginPath();
+  ctx.moveTo(road.centerX, road.startY - cameraY);
+  ctx.lineTo(road.centerX, road.endY - cameraY);
+  ctx.stroke();
   ctx.setLineDash([]);
+}
 
-  ctx.fillStyle = "rgba(182, 76, 42, 0.85)";
+function drawFinish() {
+  const y = finishZone.y - cameraY;
+  ctx.fillStyle = "rgba(255, 107, 107, 0.9)";
   ctx.beginPath();
-  ctx.arc(finishZone.x, finishZone.y, finishZone.r, 0, Math.PI * 2);
+  ctx.arc(finishZone.x, y, finishZone.r, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#fff7e3";
+  ctx.fillStyle = "#fff5d6";
   ctx.beginPath();
-  ctx.arc(finishZone.x, finishZone.y, finishZone.r - 14, 0, Math.PI * 2);
+  ctx.arc(finishZone.x, y, finishZone.r - 16, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#6a4a2b";
+  ctx.fillStyle = "#502446";
   ctx.font = "bold 16px 'Trebuchet MS'";
   ctx.textAlign = "center";
-  ctx.fillText("TRAGUARDO", finishZone.x, finishZone.y + 6);
+  ctx.fillText("TRAGUARDO", finishZone.x, y + 6);
+}
 
-  ctx.fillStyle = "#6a4a2b";
-  ctx.fillRect(arena.x + 60, arena.y + arena.height - 80, 180, 10);
-  ctx.fillStyle = "#fff7e3";
-  ctx.fillRect(arena.x + 60, arena.y + arena.height - 80, 180, 4);
-  ctx.fillStyle = "#6a4a2b";
-  ctx.font = "bold 14px 'Trebuchet MS'";
-  ctx.textAlign = "left";
-  ctx.fillText("PARTENZA", arena.x + 60, arena.y + arena.height - 90);
+function drawPizza(pizza) {
+  if (pizza.collected) return;
+  const y = pizza.y - cameraY;
+  if (y < -40 || y > canvas.height + 40) return;
+  ctx.save();
+  ctx.translate(pizza.x, y);
+  ctx.fillStyle = "#f2c94c";
+  ctx.beginPath();
+  ctx.arc(0, 0, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#e67e22";
+  ctx.beginPath();
+  ctx.arc(0, 0, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#d35400";
+  for (let i = 0; i < 6; i += 1) {
+    ctx.beginPath();
+    ctx.arc(Math.cos(i) * 6, Math.sin(i) * 6, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 function drawDog(dog) {
+  const y = dog.y - cameraY;
+  if (y < -60 || y > canvas.height + 60) return;
+
   ctx.save();
-  ctx.translate(dog.x, dog.y);
-  ctx.rotate(dog.angle + Math.PI / 2);
+  ctx.translate(dog.x, y);
   const img = images.get(dog.name);
   if (img && img.complete && img.naturalWidth > 0) {
-    const size = 64;
+    const size = 62;
     ctx.drawImage(img, -size / 2, -size / 2, size, size);
   } else {
     ctx.fillStyle = dog.color;
     ctx.beginPath();
     ctx.ellipse(0, 0, 22, 28, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "#3d2e1c";
+    ctx.fillStyle = "#2b1d11";
     ctx.beginPath();
     ctx.arc(0, -6, 6, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
 
-  ctx.fillStyle = "#2b2417";
+  ctx.fillStyle = "#1f1b2a";
   ctx.font = "bold 14px 'Trebuchet MS'";
   ctx.textAlign = "center";
-  ctx.fillText(dog.name, dog.x, dog.y - 38);
+  ctx.fillText(dog.name, dog.x, y - 36);
+
+  if (finishOrder[0] === dog) {
+    drawCrown(dog.x, y - 44);
+  }
+}
+
+function drawCrown(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.shadowColor = "rgba(0, 0, 0, 0.25)";
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 3;
+  ctx.fillStyle = "#f4d35e";
+  ctx.strokeStyle = "#c79b2f";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-22, 10);
+  ctx.lineTo(-14, -12);
+  ctx.lineTo(-4, 6);
+  ctx.lineTo(8, -14);
+  ctx.lineTo(22, 8);
+  ctx.lineTo(22, 22);
+  ctx.lineTo(-22, 22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#ff6b6b";
+  ctx.beginPath();
+  ctx.arc(-8, 4, 4, 0, Math.PI * 2);
+  ctx.arc(6, 2, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawHUD() {
   speedEl.textContent = Math.abs(dogs[0].speed).toFixed(1);
   timeEl.textContent = elapsed.toFixed(1);
+  pizzasEl.textContent = dogs[0].pizzas;
+  pizzasLillaEl.textContent = dogs[1].pizzas;
+  pizzasRamonEl.textContent = dogs[2].pizzas;
 }
 
 function updateStatus() {
@@ -246,14 +377,17 @@ function updateStatus() {
 
   const finishedCount = dogs.filter((dog) => dog.finished).length;
   if (finishedCount === dogs.length) {
-    const order = [...dogs]
-      .sort((a, b) => a.time - b.time)
-      .map((dog) => `${dog.name} (${dog.time.toFixed(1)}s)`);
-    statusEl.textContent = finishText(order);
+    const ranking = finishOrder.map((dog, idx) => `${idx + 1}. ${dog.name}`);
+    statusEl.textContent = `Arrivo completato! Classifica: ${ranking.join(" - ")}.`;
     gameOver = true;
   } else {
-    statusEl.textContent = "Guida e fermati nel traguardo!";
+    statusEl.textContent = "Corri dritto, raccogli pizze e arriva al traguardo!";
   }
+}
+
+function updateCamera() {
+  const target = dogs[0].y - 560;
+  cameraY = clamp(target, road.endY - 200, road.startY - canvas.height + 200);
 }
 
 function tick(timestamp) {
@@ -268,10 +402,22 @@ function tick(timestamp) {
   controlAI(dogs[2]);
 
   dogs.forEach(updateDog);
+  dogs.forEach(checkPizzas);
   dogs.forEach(checkFinish);
 
+  updateCamera();
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawTrack();
+  drawMiamiBackground();
+  drawRoad();
+  palms.forEach((palm) => {
+    const y = palm.y - cameraY;
+    if (y > -120 && y < canvas.height + 120) {
+      drawPalm(palm.x, y);
+    }
+  });
+  pizzas.forEach(drawPizza);
+  drawFinish();
   dogs.forEach(drawDog);
   drawHUD();
   updateStatus();
@@ -292,6 +438,12 @@ window.addEventListener("keydown", (event) => {
 
 window.addEventListener("keyup", (event) => {
   keys.delete(event.key);
+});
+
+dogs.forEach((dog) => {
+  const img = new Image();
+  img.src = dog.img;
+  images.set(dog.name, img);
 });
 
 resetGame();
