@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Corsa dei Cani</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="top">
+        <div>
+          <h1>Corsa dei Cani</h1>
+          <p class="subtitle">Usa le FRECCE per muovere, accelerare e frenare. Arriva e fermati nella zona traguardo.</p>
+        </div>
+        <div class="legend">
+          <div class="legend-row">
+            <span class="dot leo"></span>
+            <span>Giocatore 1: Leo (controllato da te)</span>
+          </div>
+          <div class="legend-row">
+            <span class="dot lilla"></span>
+            <span>Giocatrice 2: Lilla</span>
+          </div>
+          <div class="legend-row">
+            <span class="dot ramon"></span>
+            <span>Giocatore 3: Ramon Chocho</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="arena">
+        <canvas id="race" width="1100" height="620" aria-label="Pista di corsa"></canvas>
+        <div class="hud">
+          <div id="status">Pronto. Premi FRECCIA SU per partire.</div>
+          <div class="stats">
+            <div>Velocità: <span id="speed">0</span></div>
+            <div>Tempo: <span id="time">0.0</span>s</div>
+          </div>
+          <div class="controls">
+            <span>Frecce: muovi/accelera/frena</span>
+            <span>R: reset</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
