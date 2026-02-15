@@ -21,7 +21,7 @@ const dogs = [
   {
     name: "Leo",
     color: "#e7d3b3",
-    img: "assets/leo.png",
+    img: "leo/leo.png",
     x: road.centerX,
     y: 2000,
     speed: 0,
@@ -34,7 +34,7 @@ const dogs = [
   {
     name: "Lilla",
     color: "#c8c6c3",
-    img: "assets/lilla.png",
+    img: "leo/lilla.png",
     x: road.centerX - 60,
     y: 2040,
     speed: 0,
@@ -47,7 +47,7 @@ const dogs = [
   {
     name: "Ramon Chocho",
     color: "#f2c07f",
-    img: "assets/ramon.png",
+    img: "leo/ramon.png",
     x: road.centerX + 60,
     y: 2060,
     speed: 0,
