@@ -1,9 +1,12 @@
 :root {
-  --bg: #f6f1e6;
-  --track: #d6c7b2;
-  --grass: #b7cfa1;
-  --ink: #2b2417;
-  --accent: #b64c2a;
+  --bg: #f7e7ff;
+  --ocean: #7bd1ff;
+  --sunset: #ff8fb1;
+  --road: #2d2a38;
+  --road-edge: #f5d86a;
+  --palm: #48b06c;
+  --ink: #1f1b2a;
+  --accent: #ff6b6b;
   --leo: #e7d3b3;
   --lilla: #c8c6c3;
   --ramon: #f2c07f;
@@ -17,11 +20,11 @@ body {
   margin: 0;
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at top left, #fff5dd, var(--bg) 55%, #eadcc7 100%);
+  background: radial-gradient(circle at top left, #fff3ff, var(--bg) 55%, #f3d7ff 100%);
 }
 
 .app {
-  max-width: 1200px;
+  max-width: 1260px;
   margin: 0 auto;
   padding: 24px;
   display: grid;
@@ -38,20 +41,20 @@ body {
 
 h1 {
   margin: 0 0 6px 0;
-  font-size: 2.2rem;
+  font-size: 2.4rem;
   letter-spacing: 1px;
 }
 
 .subtitle {
   margin: 0;
   font-size: 1rem;
-  color: #4d3d2a;
+  color: #4b2d5f;
 }
 
 .legend {
-  background: rgba(255, 255, 255, 0.7);
-  border: 2px solid #e5d2b3;
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 2px solid #f3b5d9;
+  border-radius: 16px;
   padding: 12px 16px;
   display: grid;
   gap: 6px;
@@ -69,7 +72,7 @@ h1 {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid #5a4a34;
+  border: 2px solid #5a3c62;
   display: inline-block;
 }
 
@@ -92,23 +95,23 @@ h1 {
 #race {
   width: 100%;
   height: auto;
-  background: linear-gradient(120deg, var(--grass), #9fba8b 55%, #c7ddb1 100%);
-  border-radius: 22px;
-  border: 3px solid #836c4d;
-  box-shadow: 0 20px 35px rgba(71, 54, 34, 0.15);
+  background: linear-gradient(135deg, var(--ocean), #8ce6ff 40%, #ffd1e2 70%, var(--sunset) 100%);
+  border-radius: 24px;
+  border: 3px solid #6c4b9a;
+  box-shadow: 0 20px 40px rgba(63, 25, 71, 0.18);
 }
 
 .hud {
   position: absolute;
-  right: 20px;
-  bottom: 20px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 2px solid #e2cda9;
+  right: 18px;
+  bottom: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 2px solid #f3b5d9;
   border-radius: 16px;
   padding: 14px 16px;
   display: grid;
   gap: 8px;
-  min-width: 220px;
+  min-width: 240px;
   backdrop-filter: blur(4px);
 }
 
@@ -125,7 +128,7 @@ h1 {
 
 .controls {
   font-size: 0.85rem;
-  color: #5f4c32;
+  color: #5c3d6b;
   display: grid;
   gap: 2px;
 }
